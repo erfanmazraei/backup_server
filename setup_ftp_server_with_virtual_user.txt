@@ -1,0 +1,75 @@
+apt update
+apt install vsftpd
+cp /etc/vsftpd.conf /etc/vsftpd.conf.bak
+rm /etc/vsftpd.conf
+vi /etc/vsftpd.conf
+
+###
+listen=YES
+anonymous_enable=NO
+local_enable=YES
+write_enable=YES
+local_umask=022
+local_root=/srv
+chroot_local_user=YES
+allow_writeable_chroot=YES
+hide_ids=YES
+
+#virutal user settings
+user_config_dir=/etc/vsftpd_user_conf
+guest_enable=YES
+virtual_use_local_privs=YES
+pam_service_name=vsftpd
+nopriv_user=vsftpd
+guest_username=vsftpd
+###
+
+apt install apache2-utils -y
+apt install libpam-pwdfile -y
+mkdir /etc/vsftpd
+touch /etc/vsftpd/ftpd.passwd
+htpasswd -d /etc/vsftpd/ftpd.passwd user1
+
+mv /etc/pam.d/vsftpd /etc/pam.d/vsftpd.bak
+vim /etc/pam.d/vsftpd
+###
+auth required pam_pwdfile.so pwdfile /etc/vsftpd/ftpd.passwd
+account required pam_permit.so
+###
+
+useradd --home /home/vsftpd --gid nogroup -m --shell /bin/false vsftpd
+
+mkdir /etc/vsftpd_user_conf
+
+vim /etc/vsftpd_user_conf/user1
+###
+local_root=/srv/ftpdata/user1
+###
+
+mkdir -p /srv/ftpdata/user1
+service vsftpd restart
+
+chown -R vsftpd:nogroup /srv/ftpdata/user1
+
+### add new user:
+
+htpasswd -d /etc/vsftpd/ftpd.passwd user1
+vim /etc/vsftpd_user_conf/user1
+add following code:
+local_root=/srv/ftpdata/saeed
+cd /srv/ftpdata
+ mkdir user1
+service vsftpd restart
+chown -R vsftpd:nogroup /srv/ftpdata/user1
+
+### Transfer file from client (script)
+
+#!/bin/sh
+cd /var/backups/consul/archive/
+ftp -n ftp-backupsrv-ip<<END
+user ftp-user ftp-pass
+put *
+quit
+END
+
+
